@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL pour le service Produit
+  produit-db:
+    image: postgres:15-alpine
+    container_name: produit-postgres
+    environment:
+      POSTGRES_DB: produitdb
+      POSTGRES_USER: produit_user
+      POSTGRES_PASSWORD: produit_pass_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - produit_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U produit_user -d produitdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Base de données PostgreSQL pour le service Commande
+  commande-db:
+    image: postgres:15-alpine
+    container_name: commande-postgres
+    environment:
+      POSTGRES_DB: commandedb
+      POSTGRES_USER: commande_user
+      POSTGRES_PASSWORD: commande_pass_2024
+    ports:
+      - "5433:5432"  # Port différent pour éviter les conflits
+    volumes:
+      - commande_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commande_user -d commandedb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  produit_data:
+    driver: local
+  commande_data:
+    driver: local
